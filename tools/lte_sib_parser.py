@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import re
 import sys
+import csv
+from datetime import datetime
 
 def decode_lte_eci(hex_value):
     eci = int(hex_value, 16)
@@ -27,6 +29,20 @@ def main(file_path):
     # Cell Identity (hex + decimal)
     cell_match = re.search(r"cellIdentity[\s\S]*?'([0-9A-Fa-f]+)'H\s*\(=\s*(\d+)\)", content)
 
+    # Prepare output data
+    output_data = {
+        "timestamp": datetime.now().isoformat(),
+        "input_file": file_path,
+        "mcc": mcc or "N/A",
+        "mnc": mnc or "N/A",
+        "tac": tac or "N/A",
+        "cell_hex": "N/A",
+        "eci": "N/A",
+        "enodeb_id": "N/A",
+        "cell_id": "N/A"
+    }
+
+    # Print to console
     print("\n========== LTE SIB1 DECODE ==========\n")
 
     if mcc:
@@ -40,12 +56,27 @@ def main(file_path):
         cell_hex = cell_match.group(1)
         eci, enb, cell = decode_lte_eci(cell_hex)
 
+        output_data["cell_hex"] = cell_hex
+        output_data["eci"] = eci
+        output_data["enodeb_id"] = enb
+        output_data["cell_id"] = cell
+
         print(f"\nCell Identity (Hex): {cell_hex}")
         print(f"ECI (Decimal): {eci}")
         print(f"eNodeB ID: {enb}")
         print(f"Cell ID: {cell}")
 
     print("\n=====================================\n")
+
+    # Save to CSV
+    csv_filename = f"lte_decode_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+    with open(csv_filename, 'w', newline='') as csvfile:
+        fieldnames = output_data.keys()
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerow(output_data)
+    
+    print(f"Output saved to: {csv_filename}\n")
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
