@@ -1,0 +1,13 @@
+# Ignore all data files
+*.csv
+*.xlsx
+
+# Ignore RRC raw dumps
+event.txt
+
+# Ignore generated reports
+Mobility_Report.csv
+
+# Optional: ignore compiled python
+__pycache__/
+*.pyc
