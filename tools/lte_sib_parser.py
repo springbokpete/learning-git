@@ -1,31 +1,55 @@
+#!/usr/bin/env python3
 import re
+import sys
 
-# Corrections made to regex patterns for SIB1 file format
+def decode_lte_eci(hex_value):
+    eci = int(hex_value, 16)
+    enodeb_id = eci >> 8
+    cell_id = eci & 0xFF
+    return eci, enodeb_id, cell_id
 
-# Pattern to capture Mobile Country Code (MCC)
-mcc_pattern = r'([0-9]{3})'
+def main(file_path):
+    with open(file_path, "r", encoding="utf-8") as f:
+        content = f.read()
 
-# Pattern to capture Mobile Network Code (MNC)
-mnc_pattern = r'([0-9]{2,3})'
+    # MCC
+    mcc_match = re.search(r"mcc value\s*:\s*([\d,\s]+)", content)
+    mcc = ''.join(mcc_match.group(1).replace(',', '').split()) if mcc_match else None
 
-# Pattern to capture Tracking Area Code (TAC)
-# This captures both hex and decimal formats
-# Hex: 0x[0-9A-Fa-f]{1,6}, Decimal: [0-9]{1,6}
-tac_pattern = r'(0x[0-9A-Fa-f]{1,6}|[0-9]{1,6})'
+    # MNC
+    mnc_match = re.search(r"mnc value\s*:\s*([\d,\s]+)", content)
+    mnc = ''.join(mnc_match.group(1).replace(',', '').split()) if mnc_match else None
 
-# Pattern to capture Cell Identity
-cell_id_pattern = r'(0x[0-9A-Fa-f]{1,6}|[0-9]{1,6})'
+    # TAC (decimal inside brackets)
+    tac_match = re.search(r"trackingAreaCode[\s\S]*?\(=\s*(\d+)\)", content)
+    tac = tac_match.group(1) if tac_match else None
 
-# Sample data and test
-input_data = '''MCC: 123, MNC: 45, TAC: 0x003C, Cell Identity: 0x1E240\nMCC: 456, MNC: 12, TAC: 12345, Cell Identity: 987654'''  
+    # Cell Identity (hex + decimal)
+    cell_match = re.search(r"cellIdentity[\s\S]*?'([0-9A-Fa-f]+)'H\s*\(=\s*(\d+)\)", content)
 
-# Function to extract values based on the regex patterns
-def extract_values(data):
-    mcc_matches = re.findall(mcc_pattern, data)
-    mnc_matches = re.findall(mnc_pattern, data)
-    tac_matches = re.findall(tac_pattern, data)
-    cell_id_matches = re.findall(cell_id_pattern, data)
-    return mcc_matches, mnc_matches, tac_matches, cell_id_matches
+    print("\n========== LTE SIB1 DECODE ==========\n")
 
-# Uncomment the line below to test the extraction
-# print(extract_values(input_data))
+    if mcc:
+        print(f"MCC: {mcc}")
+    if mnc:
+        print(f"MNC: {mnc}")
+    if tac:
+        print(f"TAC: {tac}")
+
+    if cell_match:
+        cell_hex = cell_match.group(1)
+        eci, enb, cell = decode_lte_eci(cell_hex)
+
+        print(f"\nCell Identity (Hex): {cell_hex}")
+        print(f"ECI (Decimal): {eci}")
+        print(f"eNodeB ID: {enb}")
+        print(f"Cell ID: {cell}")
+
+    print("\n=====================================\n")
+
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        print("Usage: python lte_sib_parser.py <sib_file.txt>")
+        sys.exit(1)
+
+    main(sys.argv[1])
