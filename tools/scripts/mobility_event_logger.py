@@ -1,95 +1,118 @@
-#!/usr/bin/env python3
-import pandas as pd
 import re
-import os
+import pandas as pd
 
-event_list_file = "Event_List.csv"
-rrc_file = "event.txt"
-output_file = "Mobility_Report.csv"
+RRC_FILE = "event.txt"
+CSV_FILE = "127_handover_Measurement_events.csv"
 
-# -------------------------------
-# Load Event_List.csv
-# -------------------------------
-try:
-    df = pd.read_csv(event_list_file)
-except FileNotFoundError:
-    print("Event_List.csv not found.")
-    exit()
 
-print("\nFirst 20 rows:\n")
-print(df.head(20)[["Time", "HOA type", "Current LTE PCI", "Current Cell ID", "Handover status"]])
+def parse_rrc_config(text):
+    results = {}
 
-selection = input("\nEnter the row number to analyse: ").strip()
+    # -------- A3 --------
+    if "eventA3" in text:
+        offset_match = re.search(r"a3-Offset\s+:\s+\d+\s+\(=\s+([-\d\.]+)\s+dB\)", text)
+        hyst_match = re.search(r"hysteresis\s+:\s+\d+\s+\(=\s+([-\d\.]+)\s+dB\)", text)
+        ttt_match = re.search(r"timeToTrigger\s+:\s+ms(\d+)", text)
 
-if not selection.isdigit():
-    print("Invalid input.")
-    exit()
+        results["A3"] = {
+            "offset": float(offset_match.group(1)) if offset_match else None,
+            "threshold": None,
+            "hysteresis": float(hyst_match.group(1)) if hyst_match else None,
+            "ttt": int(ttt_match.group(1)) if ttt_match else None
+        }
 
-selection = int(selection)
+    # -------- A2 --------
+    if "eventA2" in text:
+        thresh_match = re.search(r"threshold-RSRP\s+:\s+\d+\s+\(=\s+([-\d\.]+)\s+dBm\)", text)
+        hyst_match = re.search(r"hysteresis\s+:\s+\d+\s+\(=\s+([-\d\.]+)\s+dB\)", text)
+        ttt_match = re.search(r"timeToTrigger\s+:\s+ms(\d+)", text)
 
-if selection < 0 or selection >= len(df):
-    print("Row out of range.")
-    exit()
+        results["A2"] = {
+            "offset": None,
+            "threshold": float(thresh_match.group(1)) if thresh_match else None,
+            "hysteresis": float(hyst_match.group(1)) if hyst_match else None,
+            "ttt": int(ttt_match.group(1)) if ttt_match else None
+        }
 
-row = df.loc[selection]
+    # -------- A5 --------
+    if "eventA5" in text:
+        thresh_match = re.search(r"threshold-RSRP\s+:\s+\d+\s+\(=\s+([-\d\.]+)\s+dBm\)", text)
+        hyst_match = re.search(r"hysteresis\s+:\s+\d+\s+\(=\s+([-\d\.]+)\s+dB\)", text)
+        ttt_match = re.search(r"timeToTrigger\s+:\s+ms(\d+)", text)
 
-# -------------------------------
-# Cell ID → eNodeB + Sector
-# -------------------------------
-cell_id = int(row["Current Cell ID"])
-enb_id = cell_id // 256
-sector_id = cell_id % 256
+        results["A5"] = {
+            "offset": None,
+            "threshold": float(thresh_match.group(1)) if thresh_match else None,
+            "hysteresis": float(hyst_match.group(1)) if hyst_match else None,
+            "ttt": int(ttt_match.group(1)) if ttt_match else None
+        }
 
-# -------------------------------
-# Extract RRC config
-# -------------------------------
-try:
-    with open(rrc_file, "r", encoding="utf-8") as f:
-        rrc_text = f.read()
-except FileNotFoundError:
-    print("event.txt not found.")
-    exit()
+    # -------- A6 --------
+    if "eventA6" in text or "eventA6-r10" in text:
+        offset_match = re.search(r"a6-Offset.*\s:\s+\d+\s+\(=\s+([-\d\.]+)\s+dB\)", text)
+        hyst_match = re.search(r"hysteresis\s+:\s+\d+\s+\(=\s+([-\d\.]+)\s+dB\)", text)
+        ttt_match = re.search(r"timeToTrigger\s+:\s+ms(\d+)", text)
 
-event_type_match = re.search(r"event(A\d|B\d)", rrc_text, re.I)
-event_type = event_type_match.group(0).upper() if event_type_match else "Unknown"
+        results["A6"] = {
+            "offset": float(offset_match.group(1)) if offset_match else None,
+            "threshold": None,
+            "hysteresis": float(hyst_match.group(1)) if hyst_match else None,
+            "ttt": int(ttt_match.group(1)) if ttt_match else None
+        }
 
-offset_match = re.search(r"\(=\s*([\d\.]+)\s*dB\)", rrc_text)
-offset = float(offset_match.group(1)) if offset_match else None
+    return results
 
-hyst_match = re.search(r"hysteresis\s*:\s*\d+\s*\(=\s*([\d\.]+)\s*dB\)", rrc_text, re.I)
-hysteresis = float(hyst_match.group(1)) if hyst_match else None
 
-ttt_match = re.search(r"timeToTrigger\s*:\s*ms(\d+)", rrc_text, re.I)
-ttt = int(ttt_match.group(1)) if ttt_match else None
+def update_csv(event_configs):
+    df = pd.read_csv(CSV_FILE)
 
-# -------------------------------
-# Build report row
-# -------------------------------
-report_data = {
-    "Time": row["Time"],
-    "HOA Type": row["HOA type"],
-    "Serving PCI": row["Current LTE PCI"],
-    "Cell ID": cell_id,
-    "eNodeB ID": enb_id,
-    "Sector ID": sector_id,
-    "Handover Status": row["Handover status"],
-    "Handover Delay (s)": row["Handover delay (s)"],
-    "Event Trigger Type": event_type,
-    "Offset (dB)": offset,
-    "Hysteresis (dB)": hysteresis,
-    "TTT (ms)": ttt,
-    "Longitude": row["Lon."],
-    "Latitude": row["Lat."]
-}
+    # Ensure numeric safety
+    df["Current Cell ID"] = df["Current Cell ID"].fillna(0).astype(int)
 
-report_df = pd.DataFrame([report_data])
+    # ---- TRANSLATE LTE ECI ----
+    df["System.1"] = df["Current Cell ID"] // 256
+    df["BTS Cell ID"] = df["Current Cell ID"] % 256
 
-# -------------------------------
-# Append to file instead of overwrite
-# -------------------------------
-if os.path.exists(output_file):
-    report_df.to_csv(output_file, mode='a', header=False, index=False)
-else:
-    report_df.to_csv(output_file, index=False)
+    updated_rows = 0
 
-print("\nRow added to Mobility_Report.csv successfully.")
+    for event_name, config in event_configs.items():
+
+        mask = df["Measurement Event"].astype(str).str.strip() == f"Event {event_name}"
+
+        if mask.any():
+            df.loc[mask, "Configured Offset (dB)"] = config["offset"]
+            df.loc[mask, "Configured Threshold (dBm)"] = config["threshold"]
+            df.loc[mask, "Configured Hysteresis (dB)"] = config["hysteresis"]
+            df.loc[mask, "Configured TTT (ms)"] = config["ttt"]
+
+            updated_rows += mask.sum()
+
+    df.to_csv(CSV_FILE, index=False)
+
+    print(f"\nUpdated {updated_rows} rows.")
+    print("Translated ALL Current Cell IDs into eNodeB + BTS Cell ID.")
+
+
+def main():
+    print("\nParsing RRC configuration...\n")
+
+    with open(RRC_FILE, "r", encoding="utf-8") as f:
+        text = f.read()
+
+    events = parse_rrc_config(text)
+
+    if not events:
+        print("No supported events detected.")
+        return
+
+    print("Events detected:")
+    for e in events:
+        print(f" - {e}")
+
+    update_csv(events)
+
+    print("Process complete.")
+
+
+if __name__ == "__main__":
+    main()
