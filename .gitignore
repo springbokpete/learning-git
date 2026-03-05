@@ -1,2 +1,22 @@
 sib_database.csv
 tools/sib1.txt
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.env
+.venv/
+venv/
+
+# Node / Dashboard
+dashboard/node_modules/
+dashboard/dist/
+
+# Docker
+*.log

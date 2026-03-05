@@ -1,0 +1,52 @@
+version: "3.9"
+
+services:
+  backend:
+    build:
+      context: ./backend
+    container_name: noc-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - ALLOWED_ORIGINS=http://localhost:3000,http://dashboard:80
+    networks:
+      - noc-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  collector:
+    build:
+      context: ./collector
+    container_name: noc-collector
+    environment:
+      - BACKEND_URL=http://backend:8000
+      - POLL_INTERVAL=30
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - noc-net
+    restart: unless-stopped
+
+  dashboard:
+    build:
+      context: ./dashboard
+      args:
+        - VITE_API_URL=
+    container_name: noc-dashboard
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - noc-net
+    restart: unless-stopped
+
+networks:
+  noc-net:
+    driver: bridge

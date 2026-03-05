@@ -87,9 +87,9 @@ class Collector:
         device = "druid-raemis-core-1"
         domain = "core"
         return [
-            MetricReading(SITE, domain, device, "registered_ues",         random.randint(50, 500)),
-            MetricReading(SITE, domain, device, "active_sessions",         random.randint(20, 400)),
-            MetricReading(SITE, domain, device, "s1ap_messages_per_sec",   round(random.uniform(10.0, 300.0), 2)),
+            MetricReading(SITE, domain, device, "pdu_sessions_active",  random.randint(5, 20)),
+            MetricReading(SITE, domain, device, "amf_registrations",    random.randint(4, 12)),
+            MetricReading(SITE, domain, device, "upf_throughput_gbps",  round(random.uniform(0.1, 2.0), 3)),
         ]
 
     # ------------------------------------------------------------------

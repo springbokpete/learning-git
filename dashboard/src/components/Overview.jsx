@@ -19,7 +19,7 @@ function SiteStatusBanner({ status }) {
     degraded:    { cls: 'status-warning', label: 'DEGRADED',     dot: 'degraded' },
     critical:    { cls: 'status-offline', label: 'CRITICAL',     dot: 'critical' },
   }
-  const cfg = map[status?.site_status?.toLowerCase()] || map.operational
+  const cfg = map[status?.status?.toLowerCase()] || map.operational
 
   return (
     <div className="card" style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12 }}>

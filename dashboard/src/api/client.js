@@ -10,9 +10,9 @@ async function apiFetch(path) {
   return res.json()
 }
 
-/** GET /status  — overall site status */
+/** GET /site-status  — overall site status */
 export async function fetchSiteStatus() {
-  return apiFetch('/status')
+  return apiFetch('/site-status')
 }
 
 /** GET /kpis  — all KPI metrics */

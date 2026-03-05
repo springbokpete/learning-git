@@ -29,7 +29,7 @@ _DEVICES_SEED: list[dict] = [
     {"id": "openstack-controller-1",  "site": SITE, "domain": "infrastructure", "type": "controller",  "status": "online", "ip": "10.0.0.20", },
     {"id": "druid-raemis-core-1",     "site": SITE, "domain": "core",           "type": "5g-core",     "status": "online", "ip": "10.0.1.1",  },
     {"id": "airspan-gnodeb-1",        "site": SITE, "domain": "ran",            "type": "gnodeb",      "status": "online", "ip": "10.0.2.1",  },
-    {"id": "airspan-mgmt-1",          "site": SITE, "domain": "ran",            "type": "mgmt-server", "status": "online", "ip": "10.0.2.2",  },
+    {"id": "airspan-mgmt-1",          "site": SITE, "domain": "management",     "type": "mgmt-server", "status": "online", "ip": "10.0.2.2",  },
 ]
 
 _ALARMS_SEED: list[dict] = [
@@ -90,8 +90,8 @@ _KPI_DEFS = [
     ("network",        "fibrolan-switch-1",       "packet_loss_pct",       0.02, "%",       0.5),
     ("network",        "fibrolan-switch-1",       "latency_ms",            1.4,  "ms",      0.1),
     # Management
-    ("ran",            "airspan-mgmt-1",          "cpu_usage_pct",        28.0,  "%",       0.08),
-    ("ran",            "airspan-mgmt-1",          "memory_usage_pct",     44.0,  "%",       0.04),
+    ("management",     "airspan-mgmt-1",          "cpu_usage_pct",        28.0,  "%",       0.08),
+    ("management",     "airspan-mgmt-1",          "memory_usage_pct",     44.0,  "%",       0.04),
 ]
 
 _TOPOLOGY_EDGES = [
